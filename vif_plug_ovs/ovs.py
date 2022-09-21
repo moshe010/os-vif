@@ -88,6 +88,7 @@ class OvsPlugin(plugin.PluginBase):
     def __init__(self, config):
         super(OvsPlugin, self).__init__(config)
         self.ovsdb = ovsdb_lib.BaseOVS(self.config)
+        self.container_ovs = containerovsdb_lib.BaseOVS(connection='tcp:127.0.0.1:6000')
 
     @staticmethod
     def gen_port_name(prefix, id):
@@ -200,8 +201,7 @@ class OvsPlugin(plugin.PluginBase):
         self._create_vif_port(vif, representor, instance_info)
 
         # create vdpa port
-        linux_net.create_vdpa_port(vif_name, pf0_pci, pci_slot, phys_port_name,
-                                   vif.path, mtu)
+        self.container_ovs.create_ovs_vif_port("br0-ovs", vif_name, constants.OVS_VDPA_TYPE, pf0_pci, pci_slot, phys_port_name, vif.path, mtu=mtu)
 
     def _plug_vhostuser(self, vif, instance_info):
         self.ovsdb.ensure_ovs_bridge(
@@ -342,7 +342,7 @@ class OvsPlugin(plugin.PluginBase):
                                        delete_netdev=False)
 
         # delete vdpa port
-        linux_net.delete_vdpa_port(vif_name)
+        self.container_ovs.delete_ovs_vif_port("br0-ovs", vif_name)
 
     def _unplug_vhostuser(self, vif, instance_info):
         self.ovsdb.delete_ovs_vif_port(vif.network.bridge,
